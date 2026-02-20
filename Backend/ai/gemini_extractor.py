@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 # Best practice: Load from environment variable or .env
 load_dotenv()
-API_KEY = os.getenv("AIzaSyAS_F9M6dq3oYifmfj0fG72bOnUdxw0Tt0")
+API_KEY = os.getenv("GEMINI_API_KEY")
 
 genai.configure(api_key=API_KEY)
 
