@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+pdfplumber
+python-docx
+Pillow
+pytesseract
+openpyxl
+google-generativeai
+python-dotenv
