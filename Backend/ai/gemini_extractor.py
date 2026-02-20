@@ -30,7 +30,7 @@ Text:
 {text}
 """
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         
         # Configure generation settings to prevent truncation
         generation_config = genai.types.GenerationConfig(
