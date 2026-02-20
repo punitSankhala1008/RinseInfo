@@ -17,6 +17,68 @@ const FileUploader = () => {
   };
 
   const renderValue = (key, value) => {
+    // Handle arrays
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return <i>Not Available</i>;
+      }
+      return (
+        <>
+          <span
+            onClick={() => toggleNested(key)}
+            style={{ cursor: "pointer", color: "#007bff" }}
+          >
+            {nestedVisible[key] ? "▼" : "▶"} {key} (Array - {value.length}{" "}
+            items)
+          </span>
+          {nestedVisible[key] && (
+            <div style={{ marginTop: "8px", marginLeft: "1.5rem" }}>
+              {value.map((item, index) => (
+                <div
+                  key={index}
+                  style={{
+                    marginBottom: "8px",
+                    padding: "4px",
+                    border: "1px solid #ddd",
+                  }}
+                >
+                  {typeof item === "object" && item !== null ? (
+                    <table
+                      border="1"
+                      cellPadding="4"
+                      style={{
+                        borderCollapse: "collapse",
+                        width: "100%",
+                        fontSize: "0.9em",
+                      }}
+                    >
+                      <tbody>
+                        {Object.entries(item).map(([subKey, subValue]) => (
+                          <tr key={subKey}>
+                            <td style={{ fontWeight: "bold", width: "30%" }}>
+                              {subKey}
+                            </td>
+                            <td>
+                              {typeof subValue === "object"
+                                ? JSON.stringify(subValue)
+                                : subValue || <i>Not Available</i>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <span>{item}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      );
+    }
+
+    // Handle nested objects
     const isNested =
       typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -46,7 +108,7 @@ const FileUploader = () => {
                     <td style={{ fontWeight: "bold", width: "30%" }}>
                       {subKey}
                     </td>
-                    <td>{subValue || <i>Not Available</i>}</td>
+                    <td>{renderValue(`${key}_${subKey}`, subValue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -56,7 +118,12 @@ const FileUploader = () => {
       );
     }
 
-    return value !== null && value !== "" ? value : <i>Not Available</i>;
+    // Handle primitive values
+    return value !== null && value !== "" ? (
+      String(value)
+    ) : (
+      <i>Not Available</i>
+    );
   };
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
