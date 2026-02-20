@@ -6,5 +6,5 @@ export const uploadDocument = async (file) => {
   const formData = new FormData();
   formData.append("file", file);
 
-  return await axios.post(BASE_URL, formData);
+  return await axios.post(BASE_URL + "/extracts", formData);
 };
