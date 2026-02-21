@@ -139,8 +139,8 @@ const FileUploader = () => {
 
       if (response.data?.download_url) {
         const fileResponse = await axios.get(
-          `http://localhost:8000${response.data.download_url}`,
-          { responseType: "blob" }
+          `https://rinseinfo.onrender.com${response.data.download_url}`,
+          { responseType: "blob" },
         );
 
         const url = window.URL.createObjectURL(new Blob([fileResponse.data]));
