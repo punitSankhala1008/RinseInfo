@@ -11,6 +11,39 @@ const FileUploader = () => {
 
   const [nestedVisible, setNestedVisible] = useState({});
 
+  const tryParseStructuredValue = (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmed = value.trim();
+    const isJsonLike =
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"));
+
+    if (!isJsonLike) {
+      return value;
+    }
+
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+        const repaired = trimmed
+          .replace(/}\s*{/g, "},{")
+          .replace(/,\s*]/g, "]");
+
+        try {
+          return JSON.parse(repaired);
+        } catch {
+          return value;
+        }
+      }
+
+      return value;
+    }
+  };
+
   const formatKey = (key) => {
     return key
       .replace(/_/g, " ")
@@ -31,6 +64,12 @@ const FileUploader = () => {
   };
 
   const renderValue = (key, value) => {
+    const normalizedValue = tryParseStructuredValue(value);
+
+    if (normalizedValue !== value) {
+      return renderValue(key, normalizedValue);
+    }
+
     if (Array.isArray(value)) {
       if (value.length === 0) {
         return <span className="muted">Not Available</span>;
@@ -49,18 +88,19 @@ const FileUploader = () => {
             <div className="nested-content">
               {value.map((item, index) => (
                 <div key={index} className="array-item">
-                  {typeof item === "object" && item !== null ? (
+                  {typeof tryParseStructuredValue(item) === "object" &&
+                  tryParseStructuredValue(item) !== null ? (
                     <div className="mini-grid">
-                      {Object.entries(item).map(([subKey, subValue]) => (
+                      {Object.entries(tryParseStructuredValue(item)).map(
+                        ([subKey, subValue]) => (
                         <div key={subKey} className="mini-row">
                           <span className="mini-key">{formatKey(subKey)}</span>
-                          <span className={`mini-value ${getValueClass(subValue)}`}>
-                            {typeof subValue === "object"
-                              ? JSON.stringify(subValue)
-                              : subValue || "Not Available"}
-                          </span>
+                          <div className={`mini-value ${getValueClass(subValue)}`}>
+                            {renderValue(`${key}_${index}_${subKey}`, subValue)}
+                          </div>
                         </div>
-                      ))}
+                      ),
+                      )}
                     </div>
                   ) : (
                     <span>{item}</span>
