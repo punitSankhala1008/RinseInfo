@@ -6,8 +6,22 @@ const FileUploader = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [extractedData, setExtractedData] = useState(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [nestedVisible, setNestedVisible] = useState({});
+
+  const formatKey = (key) => {
+    return key
+      .replace(/_/g, " ")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/^./, (text) => text.toUpperCase());
+  };
+
+  const getValueClass = (value) => {
+    if (value === null || value === "") return "muted";
+    return "";
+  };
 
   const toggleNested = (key) => {
     setNestedVisible((prev) => ({
@@ -17,56 +31,37 @@ const FileUploader = () => {
   };
 
   const renderValue = (key, value) => {
-    // Handle arrays
     if (Array.isArray(value)) {
       if (value.length === 0) {
-        return <i>Not Available</i>;
+        return <span className="muted">Not Available</span>;
       }
+
       return (
-        <>
-          <span
+        <div className="nested-block">
+          <button
+            type="button"
+            className="nested-toggle"
             onClick={() => toggleNested(key)}
-            style={{ cursor: "pointer", color: "#007bff" }}
           >
-            {nestedVisible[key] ? "▼" : "▶"} {key} (Array - {value.length}{" "}
-            items)
-          </span>
+            {nestedVisible[key] ? "▼" : "▶"} {formatKey(key)} ({value.length} items)
+          </button>
           {nestedVisible[key] && (
-            <div style={{ marginTop: "8px", marginLeft: "1.5rem" }}>
+            <div className="nested-content">
               {value.map((item, index) => (
-                <div
-                  key={index}
-                  style={{
-                    marginBottom: "8px",
-                    padding: "4px",
-                    border: "1px solid #ddd",
-                  }}
-                >
+                <div key={index} className="array-item">
                   {typeof item === "object" && item !== null ? (
-                    <table
-                      border="1"
-                      cellPadding="4"
-                      style={{
-                        borderCollapse: "collapse",
-                        width: "100%",
-                        fontSize: "0.9em",
-                      }}
-                    >
-                      <tbody>
-                        {Object.entries(item).map(([subKey, subValue]) => (
-                          <tr key={subKey}>
-                            <td style={{ fontWeight: "bold", width: "30%" }}>
-                              {subKey}
-                            </td>
-                            <td>
-                              {typeof subValue === "object"
-                                ? JSON.stringify(subValue)
-                                : subValue || <i>Not Available</i>}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className="mini-grid">
+                      {Object.entries(item).map(([subKey, subValue]) => (
+                        <div key={subKey} className="mini-row">
+                          <span className="mini-key">{formatKey(subKey)}</span>
+                          <span className={`mini-value ${getValueClass(subValue)}`}>
+                            {typeof subValue === "object"
+                              ? JSON.stringify(subValue)
+                              : subValue || "Not Available"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <span>{item}</span>
                   )}
@@ -74,64 +69,67 @@ const FileUploader = () => {
               ))}
             </div>
           )}
-        </>
+        </div>
       );
     }
 
-    // Handle nested objects
     const isNested =
       typeof value === "object" && value !== null && !Array.isArray(value);
 
     if (isNested) {
       return (
-        <>
-          <span
+        <div className="nested-block">
+          <button
+            type="button"
+            className="nested-toggle"
             onClick={() => toggleNested(key)}
-            style={{ cursor: "pointer", color: "#007bff" }}
           >
-            {nestedVisible[key] ? "▼" : "▶"} {key}
-          </span>
+            {nestedVisible[key] ? "▼" : "▶"} {formatKey(key)}
+          </button>
           {nestedVisible[key] && (
-            <table
-              border="1"
-              cellPadding="8"
-              style={{
-                borderCollapse: "collapse",
-                marginTop: "8px",
-                marginLeft: "1.5rem",
-                width: "95%",
-              }}
-            >
-              <tbody>
+            <div className="nested-content">
+              <div className="data-table compact">
                 {Object.entries(value).map(([subKey, subValue]) => (
-                  <tr key={subKey}>
-                    <td style={{ fontWeight: "bold", width: "30%" }}>
-                      {subKey}
-                    </td>
-                    <td>{renderValue(`${key}_${subKey}`, subValue)}</td>
-                  </tr>
+                  <div key={subKey} className="data-row">
+                    <div className="data-key">{formatKey(subKey)}</div>
+                    <div className="data-value">
+                      {renderValue(`${key}_${subKey}`, subValue)}
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           )}
-        </>
+        </div>
       );
     }
 
-    // Handle primitive values
     return value !== null && value !== "" ? (
       String(value)
     ) : (
-      <i>Not Available</i>
+      <span className="muted">Not Available</span>
     );
   };
+
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile || null);
+    setError("");
+    setSuccess("");
+
+    if (selectedFile) {
+      setExtractedData(null);
+    }
   };
 
   const handleUpload = async () => {
-    if (!file) return alert("Please select a File");
+    if (!file) {
+      setError("Please select a document before extraction.");
+      return;
+    }
 
+    setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
@@ -150,54 +148,77 @@ const FileUploader = () => {
         document.body.appendChild(link);
         link.click();
         link.remove();
+        window.URL.revokeObjectURL(url);
       }
 
       if (response.data?.data) {
         setExtractedData(response.data.data);
+        setSuccess("Extraction complete. Results are ready below.");
       }
     } catch (err) {
-      alert("Upload failed");
+      setError("Upload failed. Please try again with a supported file.");
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="uploader">
-      <h2>📄 Document Detail Extractor</h2>
-      <input type="file" onChange={handleFileChange} />
-      <br />
-      <button onClick={handleUpload} disabled={loading}>
-        {loading ? "Processing..." : "Upload & Extract"}
-      </button>
+  const dataEntries = extractedData ? Object.entries(extractedData) : [];
 
-      {extractedData && (
-        <div style={{ textAlign: "left", marginTop: "1rem" }}>
-          <h3>📋 Extracted Data:</h3>
-          <table
-            border="1"
-            cellPadding="10"
-            style={{ borderCollapse: "collapse", width: "100%" }}
-          >
-            <thead>
-              <tr>
-                <th style={{ backgroundColor: "#f0f0f0" }}>Field</th>
-                <th style={{ backgroundColor: "#f0f0f0" }}>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(extractedData).map(([key, value]) => (
-                <tr key={key}>
-                  <td style={{ fontWeight: "bold" }}>{key}</td>
-                  <td>{renderValue(key, value)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+  return (
+    <section className="uploader-card">
+      <div className="card-top">
+        <h2>Extract Document Details</h2>
+        <p>
+          Supports PDF, DOCX and image files. Upload once and get structured
+          output instantly.
+        </p>
+      </div>
+
+      <div className="upload-controls">
+        <label className="file-drop-zone" htmlFor="document-input">
+          <span className="zone-title">Choose a file to process</span>
+          <span className="zone-subtitle">
+            {file ? file.name : "No file selected yet"}
+          </span>
+          <input
+            id="document-input"
+            type="file"
+            onChange={handleFileChange}
+            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.tiff,.bmp"
+          />
+        </label>
+
+        <button className="upload-btn" onClick={handleUpload} disabled={loading}>
+          {loading ? "Processing..." : "Upload & Extract"}
+        </button>
+      </div>
+
+      {(error || success) && (
+        <div className="status-stack">
+          {error && <div className="status error">{error}</div>}
+          {success && <div className="status success">{success}</div>}
         </div>
       )}
-    </div>
+
+      {extractedData && (
+        <div className="results-panel">
+          <div className="results-header">
+            <h3>Extraction Results</h3>
+            <span>{dataEntries.length} fields detected</span>
+          </div>
+
+          <div className="data-table">
+            {dataEntries.map(([key, value]) => (
+              <div key={key} className="data-row">
+                <div className="data-key">{formatKey(key)}</div>
+                <div className="data-value">{renderValue(key, value)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 };
 
